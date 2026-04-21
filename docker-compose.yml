@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  # Banco de Dados
+  db-solar:
+    image: postgres:15
+    container_name: postgres_solar
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata_solar:/var/lib/postgresql/data
+
+  # API
+  api-solar:
+    build: .
+    container_name: api_solar
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      # Sobrescrevemos o localhost do .env pelo nome do serviço do banco
+      DB_HOST: db-solar
+    depends_on:
+      db-solar:
+        condition: service_healthy
+
+volumes:
+  pgdata_solar:
