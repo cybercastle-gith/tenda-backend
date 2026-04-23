@@ -11,11 +11,11 @@ Este guia explica como subir o ambiente de desenvolvimento da API de forma autom
 
 ---
 
-## 🏁 Passo a Passo Rápido
+## 🏁 Inicialização Rápida
 
 ### 1. Preparar as Variáveis de Ambiente
 
-Crie o arquivo `.env` na raiz do projeto copiando o exemplo:
+Crie o arquivo `.env` na raiz do projeto:
 
 ```bash
 cp .env.example .env
@@ -27,47 +27,119 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-### 3. Rodar Migration vinda do github
+Detecta mudanças, reconstrói a imagem e substitui o container antigo automaticamente.
+
+### 3. Rodar as Migrations
 
 ```bash
 docker exec -it api_solar npm run migration:run
 ```
 
-Obs.:Confira se realmente tem um arquivo migration em src/shared/database/migration
+> **Nota:** Confirme se realmente existe um arquivo de migration em `src/shared/database/migrations`
 
-## Comandos Úteis
+---
 
-#### Sobre a api no docker ou banco
+## 📋 Comandos Úteis
+
+### Ver Logs
 
 ```bash
 docker logs -f api_solar
 ```
 
-```bash
-docker-compose stop
-```
+Exibe os logs em tempo real da API.
+
+### Parar os Containers
 
 ```bash
-docker-compose start
+docker compose stop
 ```
 
+Pausa os containers sem removê-los (pode ser reiniciado com `start`).
+
+### Reiniciar os Containers
+
 ```bash
-docker-compose down -v
+docker compose start
 ```
+
+Reinicia containers que foram parados.
+
+### Remover Containers e Volumes
+
+```bash
+docker compose down -v
+```
+
+Remove containers, redes e volumes (⚠️ apaga dados do banco).
+
+### Acessar o Container
 
 ```bash
 docker exec -it api_solar sh
 ```
 
+Abre um shell dentro do container da API.
+
+### Listar Containers
+
+```bash
+docker ps              # Containers ativos
+docker ps -a           # Todos os containers
+docker ps -aq | wc -l  # Quantidade total de containers
+```
+
+### Parar um Container Específico
+
+```bash
+docker stop <id_container ou nome>
+```
+
 ---
 
-## 🛠️ Resolvendo Conflitos de Banco
+## 🔧 Resolvendo Conflitos de Banco
 
-Se o banco de dados apresentar erros de "Relation already exists" ou as migrations entrarem em conflito:
+### Erro: "Relation already exists" ou Migrations em Conflito
 
-1. **Limpe o banco:** `docker exec -it api_solar npm run schema:drop`
-2. **Remova os volumes:** `docker-compose down -v`
-3. **Suba tudo de novo:** `docker-compose up -d`
-4. **Aplique as migrations:** `docker exec -it api_solar npm run migration:run`
-   Obs.: Se voce excluiu as migrations dentro da src/shared/database/migrations, tera de criar uma
-   com: `docker exec -it api_solar npm run migration:generate`
+**Solução passo a passo:**
+
+1. Limpe o banco:
+
+   ```bash
+   docker exec -it api_solar npm run schema:drop
+   ```
+
+2. Remova os volumes:
+
+   ```bash
+   docker compose down -v
+   ```
+
+3. Suba tudo novamente:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. Aplique as migrations:
+   ```bash
+   docker exec -it api_solar npm run migration:run
+   ```
+
+### Migrations Foram Deletadas
+
+Se você deletou as migrations em `src/shared/database/migrations`, crie uma nova:
+
+```bash
+docker exec -it api_solar npm run migration:generate
+```
+
+### Reset Completo (Após Importar Nova Biblioteca)
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up
+```
+
+Reconstrói tudo do zero, garantindo que novas dependências sejam instaladas.

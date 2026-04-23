@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { verify } from 'jsonwebtoken';
-import authConfig from '../config/auth';
+import { Request, Response, NextFunction } from "express";
+import { verify } from "jsonwebtoken";
+import authConfig from "../config/auth";
 
 interface ITokenPayload {
   iat: number;
@@ -11,19 +11,19 @@ interface ITokenPayload {
 export function ensureAuthenticated(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const authHeader = request.headers.authorization;
 
   if (!authHeader) {
-    response.status(401).json({ message: 'Token não enviado.' });
+    response.status(401).json({ message: "Token não enviado." });
     return;
   }
 
-  const parts = authHeader.split(' ');
+  const parts = authHeader.split(" ");
 
   if (parts.length !== 2) {
-    response.status(401).json({ message: 'Token malformatado.' });
+    response.status(401).json({ message: "Token malformatado." });
     return;
   }
 
@@ -31,14 +31,16 @@ export function ensureAuthenticated(
   const [scheme, token] = parts as [string, string];
 
   if (!/^Bearer$/i.test(scheme)) {
-    response.status(401).json({ message: 'Token deve seguir o padrão Bearer.' });
+    response
+      .status(401)
+      .json({ message: "Token deve seguir o padrão Bearer." });
     return;
   }
 
   const { secret } = authConfig.jwt;
 
   if (!secret) {
-    response.status(500).json({ message: 'JWT Secret não configurado.' });
+    response.status(500).json({ message: "JWT Secret não configurado." });
     return;
   }
 
@@ -54,7 +56,7 @@ export function ensureAuthenticated(
 
     return next();
   } catch (err) {
-    response.status(401).json({ message: 'Token inválido ou expirado.' });
+    response.status(401).json({ message: "Token inválido ou expirado." });
     return;
   }
 }
