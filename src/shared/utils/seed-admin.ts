@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import bcrypt from "bcrypt";
 import { AppDataSource } from "../database/data-source";
-import { Usuario } from "../modules/usuario/schema/Usuario.schema";
+import { User } from "../../modules/user/schema/User.schema";
 
 async function seedAdmin() {
   // Verifica se a senha do admin foi fornecida via variável de ambiente
@@ -13,7 +13,7 @@ async function seedAdmin() {
 
   await AppDataSource.initialize();
 
-  const repo = AppDataSource.getRepository(Usuario);
+  const repo = AppDataSource.getRepository(User);
 
   const adminExistente = await repo.findOne({
     where: { email: "admin@email.com" },
@@ -30,11 +30,12 @@ async function seedAdmin() {
 
   const admin = repo.create({
     email: "admin@email.com",
-    telefone: "67999999999",
-    senha: senhaHash,
-    cpf: "00000000000",
-    papel: "ADMIN",
-    email_verificado: true,
+    password_hash: senhaHash,
+    role: "admin",
+    adminProfile: {
+      full_name: "Administrador",
+      department: "Admin",
+    },
   });
 
   await repo.save(admin);
