@@ -10,28 +10,24 @@ import {
 import { AdminProfile } from "./AdminProfile.schema";
 import { ClientProfile } from "./ClientProfile.schema";
 
+export enum UserRole {
+  ADMIN = "admin",
+  CLIENT = "client",
+}
+
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ length: 20 })
+  @Column({ type: "enum", enum: UserRole })
   role!: string;
-
+  
   @Column({ length: 255, unique: true })
   email!: string;
 
   @Column({ length: 100 })
   password_hash!: string;
-
-  @Column({ length: 100 })
-  name!: string;
-
-  @Column({ unique: true, length: 14 })
-  cpf!: string;
-
-  @Column({ nullable: true })
-  phone!: string;
 
   @CreateDateColumn()
   created_at!: Date;
