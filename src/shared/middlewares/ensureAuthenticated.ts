@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
-import { verify } from "jsonwebtoken";
+import { JwtPayload, verify } from "jsonwebtoken";
 import authConfig from "../config/auth";
 
-interface ITokenPayload {
+interface ITokenPayload extends JwtPayload {
   iat: number;
   exp: number;
-  sub: string;
+  id: string;
+  email: string;
+  role: string;
 }
 
 export function ensureAuthenticated(
@@ -44,18 +46,33 @@ export function ensureAuthenticated(
     return;
   }
 
+  console.log("🔐 Verificando token...");
+  console.log("Secret configurada:", secret.substring(0, 10) + "...");
+
   try {
     // Usamos o '!' no token e no secret para garantir que são strings
-    const decoded = verify(token!, secret!);
+    const decoded = verify(token!, secret!) as ITokenPayload;
 
-    const { sub } = decoded as ITokenPayload;
+    const { id } = decoded;
 
-    request.user = {
-      id: sub,
-    };
+    if (!id) {
+      console.error("❌ ID não encontrado no token!");
+      response
+        .status(401)
+        .json({ message: "Token inválido: sem identificador." });
+      return;
+    }
+
+    request.user = { id };
+
+    console.log("User definido:\n", request.user);
 
     return next();
   } catch (err) {
+    console.error(
+      "❌ Erro ao verificar token:",
+      err instanceof Error ? err.message : err,
+    );
     response.status(401).json({ message: "Token inválido ou expirado." });
     return;
   }

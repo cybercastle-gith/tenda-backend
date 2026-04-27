@@ -10,10 +10,12 @@ const options: Options = {
         Documentação da API Tenda Solar.
         
         **Segurança implementada:**
-        - Validação de input obrigatória.
-        - Hash de senhas com bcrypt.
-        - Autenticação via JWT Bearer Token (em desenvolvimento).
+        - Validação de input obrigatória com Zod.
+        - Hash de senhas com bcrypt (salt 12).
+        - Autenticação via JWT Bearer Token.
+        - Refresh Token com expiração.
         - Profiles separados para Admin e Cliente.
+        - Middleware de autenticação e tratamento de erros.
       `,
     },
     servers: [
@@ -28,13 +30,126 @@ const options: Options = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Insira o token JWT retornado no login.",
+          description:
+            "Insira o token JWT retornado no login. Formato: Bearer <token>",
         },
       },
       schemas: {
-        // --- USUÁRIO ---
+        // --- LOGIN / AUTENTICAÇÃO ---
 
-        // Entrada para Cadastro de Cliente
+        // Request: Login
+        LoginDTO: {
+          type: "object",
+          required: ["email", "password"],
+          properties: {
+            email: {
+              type: "string",
+              format: "email",
+              example: "usuario@example.com",
+            },
+            password: {
+              type: "string",
+              format: "password",
+              minLength: 8,
+              example: "SenhaForte123",
+            },
+          },
+        },
+
+        // Request: Refresh Token
+        RefreshTokenDTO: {
+          type: "object",
+          required: ["refresh_token"],
+          properties: {
+            refresh_token: {
+              type: "string",
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            },
+          },
+        },
+
+        // Response: User Info (usado em LoginResponse)
+        UserInfo: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              format: "uuid",
+              example: "550e8400-e29b-41d4-a716-446655440000",
+            },
+            email: {
+              type: "string",
+              format: "email",
+              example: "usuario@example.com",
+            },
+            role: {
+              type: "string",
+              enum: ["admin", "client"],
+              example: "client",
+            },
+            full_name: {
+              type: "string",
+              example: "João da Silva",
+            },
+          },
+        },
+
+        // Response: Login
+        LoginResponse: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              example: "success",
+            },
+            data: {
+              type: "object",
+              properties: {
+                user: {
+                  $ref: "#/components/schemas/UserInfo",
+                },
+                access_token: {
+                  type: "string",
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  description: "Token de acesso. Válido por 15 minutos.",
+                },
+                refresh_token: {
+                  type: "string",
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  description: "Token para renovar sessão. Válido por 7 dias.",
+                },
+              },
+            },
+          },
+        },
+
+        // Response: Refresh
+        RefreshResponse: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              example: "success",
+            },
+            data: {
+              type: "object",
+              properties: {
+                access_token: {
+                  type: "string",
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                },
+                refresh_token: {
+                  type: "string",
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                },
+              },
+            },
+          },
+        },
+
+        // --- USUÁRIO / REGISTRO ---
+
+        // Request: Cadastro de Cliente
         RegisterClientDTO: {
           type: "object",
           required: ["email", "password", "full_name", "cpf", "phone"],
@@ -48,6 +163,7 @@ const options: Options = {
               type: "string",
               format: "password",
               minLength: 8,
+              description: "Mínimo 8 caracteres. Será feito hash com bcrypt.",
               example: "SenhaForte123",
             },
             full_name: {
@@ -57,6 +173,7 @@ const options: Options = {
             cpf: {
               type: "string",
               pattern: "^\\d{11}$",
+              description: "CPF sem máscara (11 dígitos)",
               example: "12345678901",
             },
             phone: {
@@ -66,7 +183,7 @@ const options: Options = {
           },
         },
 
-        // Entrada para Cadastro de Admin
+        // Request: Cadastro de Admin
         RegisterAdminDTO: {
           type: "object",
           required: ["email", "password", "full_name", "department"],
@@ -88,10 +205,48 @@ const options: Options = {
             },
             department: {
               type: "string",
+              description: "Departamento do admin",
               example: "Financeiro",
             },
           },
         },
+
+        // Response: Register (genérico)
+        RegisterResponse: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              example: "success",
+            },
+            data: {
+              type: "object",
+              properties: {
+                id: {
+                  type: "string",
+                  format: "uuid",
+                },
+                email: {
+                  type: "string",
+                  format: "email",
+                },
+                role: {
+                  type: "string",
+                  enum: ["admin", "client"],
+                },
+                full_name: {
+                  type: "string",
+                },
+                createdAt: {
+                  type: "string",
+                  format: "date-time",
+                },
+              },
+            },
+          },
+        },
+
+        // --- PROFILES ---
 
         // Profile de Cliente
         ClientProfile: {
@@ -146,37 +301,49 @@ const options: Options = {
           },
         },
 
-        // Resposta de Usuário Criado
-        RegisterClientResponse: {
+        // --- ERROS ---
+
+        // Erro Geral
+        ErrorResponse: {
           type: "object",
           properties: {
-            usuario: {
-              type: "object",
-              properties: {
-                id: {
-                  type: "string",
-                  format: "uuid",
-                },
-                name: {
-                  type: "string",
-                },
-              },
+            status: {
+              type: "string",
+              example: "error",
+            },
+            message: {
+              type: "string",
+              example: "Erro ao processar requisição",
             },
           },
         },
 
-        // --- GERAL ---
-        Erro: {
+        // Erro de Validação
+        ValidationErrorResponse: {
           type: "object",
           properties: {
-            mensagem: {
+            status: {
               type: "string",
-              example: "Há campos faltando.",
+              example: "error",
             },
-            detalhes: {
+            message: {
+              type: "string",
+              example: "Erro de validação",
+            },
+            errors: {
               type: "array",
               items: {
-                type: "string",
+                type: "object",
+                properties: {
+                  field: {
+                    type: "string",
+                    example: "email",
+                  },
+                  message: {
+                    type: "string",
+                    example: "Email inválido",
+                  },
+                },
               },
             },
           },
@@ -184,8 +351,157 @@ const options: Options = {
       },
     },
     paths: {
-      // Rotas de Usuário
-      "/register/user": {
+      // ========== AUTENTICAÇÃO ==========
+
+      "/api/v1/auth/login": {
+        post: {
+          tags: ["Autenticação"],
+          summary: "Login do usuário",
+          description:
+            "Autentica um usuário e retorna access_token e refresh_token.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/LoginDTO",
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Login realizado com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/LoginResponse",
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Email ou senha inválidos",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "422": {
+              description: "Erro de validação",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ValidationErrorResponse",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/api/v1/auth/refresh": {
+        post: {
+          tags: ["Autenticação"],
+          summary: "Renovar token de acesso",
+          description: "Renova o access_token usando um refresh_token válido.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RefreshTokenDTO",
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Token renovado com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/RefreshResponse",
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Refresh token inválido ou expirado",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Refresh token expirado",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/api/v1/auth/logout": {
+        post: {
+          tags: ["Autenticação"],
+          summary: "Logout do usuário",
+          description:
+            "Revoga o refresh_token do usuário, encerrando sua sessão.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RefreshTokenDTO",
+                },
+              },
+            },
+          },
+          responses: {
+            "204": {
+              description: "Logout realizado com sucesso",
+            },
+            "400": {
+              description: "Erro ao fazer logout",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Não autorizado",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // ========== USUÁRIOS ==========
+
+      "/api/v1/users": {
         post: {
           tags: ["Usuários"],
           summary: "Registrar novo cliente",
@@ -203,21 +519,93 @@ const options: Options = {
           },
           responses: {
             "201": {
-              description: "Cliente criado com sucesso",
+              description: "Cliente registrado com sucesso",
               content: {
                 "application/json": {
                   schema: {
-                    $ref: "#/components/schemas/RegisterClientResponse",
+                    $ref: "#/components/schemas/RegisterResponse",
                   },
                 },
               },
             },
             "400": {
-              description: "Erro de validação ou dados inválidos",
+              description: "Erro de validação ou email já existe",
               content: {
                 "application/json": {
                   schema: {
-                    $ref: "#/components/schemas/Erro",
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "422": {
+              description: "Erro de validação dos dados",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ValidationErrorResponse",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/api/v1/users/admin": {
+        post: {
+          tags: ["Usuários"],
+          summary: "Registrar novo administrador",
+          description:
+            "Cria um novo usuário com role 'admin' e seu respectivo AdminProfile. Requer autenticação de admin.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RegisterAdminDTO",
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Admin registrado com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/RegisterResponse",
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Erro de validação ou email já existe",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Não autorizado - requer autenticação de admin",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "422": {
+              description: "Erro de validação dos dados",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ValidationErrorResponse",
                   },
                 },
               },

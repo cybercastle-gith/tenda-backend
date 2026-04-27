@@ -1,3 +1,5 @@
+import { RefreshToken } from "../../modules/auth/schema/RefreshToken.schema";
+
 export {};
 
 declare global {
@@ -6,6 +8,7 @@ declare global {
       user: {
         id: string;
       };
+      refreshTokenRecord?: RefreshToken;
     }
   }
 }

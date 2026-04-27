@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 // Validation of required environment variables
-const requiredEnvVars = ["SECRET"] as const;
+const requiredEnvVars = ["JWT_SECRET"] as const;
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     throw new Error(`Missing required environment variable: ${envVar}`);
@@ -10,7 +10,7 @@ for (const envVar of requiredEnvVars) {
 
 export const config = {
   mode: process.env.NODE_ENV || "development",
-  secret: process.env.SECRET!, // now guaranteed to exist
+  jwtSecret: process.env.JWT_SECRET!, // now guaranteed to exist
   port: Number(process.env.PORT) || 3000,
   host: "0.0.0.0",
 

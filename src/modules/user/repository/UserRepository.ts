@@ -1,17 +1,17 @@
 import { Repository } from "typeorm";
-import { RegisterClientDTO } from "../dtos/RegisterClient.DTO";
 import { User } from "../schema/User.schema";
-import { IUserRepository } from "./IUserRepository";
-import { RegisterAdminDTO } from "../dtos/RegisterAdmin.DTO";
+import { IUserRepository } from "../interfaces/IUserRepository";
+import { RegisterClientInput } from "./inputs/RegisterClient.input";
+import { RegisterAdminInput } from "./inputs/RegisterAdmin.input";
 
 export class UserRepository implements IUserRepository {
   constructor(private repositorio: Repository<User>) {}
 
-  async createUser(dados: RegisterClientDTO): Promise<User> {
+  async createUser(dados: RegisterClientInput): Promise<User> {
     return await this.repositorio.manager.transaction(async (tm) => {
       const user = tm.create(User, {
         email: dados.email,
-        password_hash: dados.password,
+        password_hash: dados.password_hash,
         role: "client",
         clientProfile: {
           full_name: dados.full_name,
@@ -24,11 +24,11 @@ export class UserRepository implements IUserRepository {
     });
   }
 
-  async createAdmin(dados: RegisterAdminDTO): Promise<User> {
+  async createAdmin(dados: RegisterAdminInput): Promise<User> {
     return await this.repositorio.manager.transaction(async (tm) => {
       const admin = tm.create(User, {
         email: dados.email,
-        password_hash: dados.password,
+        password_hash: dados.password_hash,
         role: "admin",
         adminProfile: {
           full_name: dados.full_name,
@@ -43,6 +43,16 @@ export class UserRepository implements IUserRepository {
   async findUserByEmail(email: string): Promise<User | null> {
     const user = await this.repositorio.findOne({
       where: { email },
+      relations: ["clientProfile", "adminProfile"],
+    });
+
+    return user;
+  }
+
+  async findUserByEmailWithPassword(email: string): Promise<User | null> {
+    const user = await this.repositorio.findOne({
+      where: { email },
+      select: ["id", "email", "password_hash", "role"],
       relations: ["clientProfile", "adminProfile"],
     });
 
