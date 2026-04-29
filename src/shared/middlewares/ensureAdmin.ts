@@ -10,8 +10,10 @@ export function ensureAdmin(
 
   // Comparando com o Enum para evitar erro de digitação
   if (role !== UserRole.ADMIN) {
-    response.status(403).json({ 
-      message:"Acesso negado. Esta rota é exclusiva para administradores. Você não possui ATORIZAÇÃO e pode ser PROCESSADO por isso!"  
+    response.status(403).json({
+      message: `Acesso negado. Esta rota é exclusiva para administradores. 
+      Você não possui AUTORIZAÇÃO e pode ser PROCESSADO por isso, 
+      sendo rastreado pelo endereço de IP!`,
     });
     return;
   }

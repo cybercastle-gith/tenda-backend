@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only ./main.ts",
-    "seed:admin": "ts-node-dev src/shared/utils/seed-Admin.ts",
+    "seed:admin": "ts-node-dev src/shared/utils/seed-admin.ts",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm -- migration:generate src/shared/database/migrations/Init -d src/shared/database/data-source.ts",
     "migration:run": "npm run typeorm -- migration:run -d src/shared/database/data-source.ts",
@@ -24,7 +24,7 @@
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.1.1",   
+    "multer": "^2.1.1",
     "node-tesseract-ocr": "^2.2.1",
     "nodemailer": "^8.0.5",
     "pg": "^8.20.0",
