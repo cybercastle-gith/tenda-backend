@@ -211,6 +211,39 @@ const options: Options = {
           },
         },
 
+        // Request: Atualizar Cliente
+        UpdateClientDTO: {
+          type: "object",
+          properties: {
+            full_name: {
+              type: "string",
+              minLength: 3,
+              example: "João Silva Atualizado",
+            },
+            phone: {
+              type: "string",
+              minLength: 10,
+              example: "67992999998",
+            },
+          },
+        },
+
+        // Request: Atualizar Admin
+        UpdateAdminDTO: {
+          type: "object",
+          properties: {
+            full_name: {
+              type: "string",
+              minLength: 3,
+              example: "Admin Atualizado",
+            },
+            department: {
+              type: "string",
+              example: "Financeiro",
+            },
+          },
+        },
+
         // Response: Register (genérico)
         RegisterResponse: {
           type: "object",
@@ -245,6 +278,52 @@ const options: Options = {
             },
           },
         },
+
+        // Response: User Completo (com profile)
+        UserDetailResponse: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              example: "success",
+            },
+            data: {
+              type: "object",
+              properties: {
+                id: {
+                  type: "string",
+                  format: "uuid",
+                },
+                email: {
+                  type: "string",
+                  format: "email",
+                },
+                role: {
+                  type: "string",
+                  enum: ["admin", "client"],
+                },
+                adminProfile: {
+                  $ref: "#/components/schemas/AdminProfile",
+                  description: "Presente se o usuário for admin",
+                },
+                clientProfile: {
+                  $ref: "#/components/schemas/ClientProfile",
+                  description: "Presente se o usuário for cliente",
+                },
+                created_at: {
+                  type: "string",
+                  format: "date-time",
+                },
+                updated_at: {
+                  type: "string",
+                  format: "date-time",
+                },
+              },
+            },
+          },
+        },
+
+        // Response: Update Success
 
         // --- PROFILES ---
 
@@ -592,6 +671,111 @@ const options: Options = {
             },
             "401": {
               description: "Não autorizado - requer autenticação de admin",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "422": {
+              description: "Erro de validação dos dados",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ValidationErrorResponse",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/api/v1/users/me": {
+        get: {
+          tags: ["Usuários"],
+          summary: "Obter dados do usuário autenticado",
+          description:
+            "Retorna os dados completos do usuário logado, incluindo seu profile (admin ou client).",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            "200": {
+              description: "Dados do usuário recuperados com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/UserDetailResponse",
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Não autorizado - token inválido ou expirado",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/api/v1/users/edit": {
+        patch: {
+          tags: ["Usuários"],
+          summary: "Atualizar dados do usuário",
+          description:
+            "Atualiza os dados do perfil do usuário autenticado. Os campos disponíveis variam conforme o role (admin ou client).",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  oneOf: [
+                    {
+                      $ref: "#/components/schemas/UpdateClientDTO",
+                    },
+                    {
+                      $ref: "#/components/schemas/UpdateAdminDTO",
+                    },
+                  ],
+                  discriminator: {
+                    propertyName: "role",
+                    description: "O schema depende do role do usuário",
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Usuário atualizado com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/UserDetailResponse",
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Erro de validação",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/ErrorResponse",
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Não autorizado - token inválido ou expirado",
               content: {
                 "application/json": {
                   schema: {

@@ -48,7 +48,5 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.2"
   }
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^6.0.2"
-  }
+    
 }
