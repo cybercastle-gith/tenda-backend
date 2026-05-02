@@ -13,6 +13,9 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET!, // now guaranteed to exist
   port: Number(process.env.PORT) || 3000,
   host: "0.0.0.0",
+  refreshTokenCleanupIntervalMinutes: Number(
+    process.env.REFRESH_TOKEN_CLEANUP_INTERVAL_MINUTES || 60,
+  ),
 
   db: {
     host: process.env.DB_HOST || "localhost",

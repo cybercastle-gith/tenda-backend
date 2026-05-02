@@ -1,31 +1,37 @@
 import { Repository } from "typeorm";
 import { RefreshToken } from "../schema/RefreshToken.schema";
-import crypto from "crypto";
+import * as crypto from "crypto";
 import { IAuthRepository } from "../interfaces/IAuthRepository";
+
+export function hashRefreshToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 export class AuthRepository implements IAuthRepository {
   constructor(private repository: Repository<RefreshToken>) {}
 
-  async create(userId: string, expiresInDays: number): Promise<RefreshToken> {
-    await this.revokeByUserId(userId);
-
+  async create(userId: string, expiresInDays: number): Promise<{ refreshToken: RefreshToken; token: string }> {
     const tokenValue = crypto.randomBytes(64).toString("hex");
+    const tokenHash = hashRefreshToken(tokenValue);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
     const refreshToken = this.repository.create({
       user: { id: userId },
-      token: tokenValue,
+      token: tokenHash,
       expiresAt,
       revoked: false,
     });
 
-    return await this.repository.save(refreshToken);
+    return {
+      refreshToken: await this.repository.save(refreshToken),
+      token: tokenValue,
+    };
   }
 
-  async findByToken(token: string): Promise<RefreshToken | null> {
+  async findByToken(tokenHash: string): Promise<RefreshToken | null> {
     return await this.repository.findOne({
-      where: { token, revoked: false },
+      where: { token: tokenHash, revoked: false },
       relations: ["user"],
     });
   }
@@ -37,11 +43,7 @@ export class AuthRepository implements IAuthRepository {
     );
   }
 
-  async revoke(token: string): Promise<void> {
-    const tokenRecord = await this.repository.findOne({ where: { token } });
-    if (tokenRecord) {
-      tokenRecord.revoked = true;
-      await this.repository.save(tokenRecord);
-    }
+  async revoke(tokenHash: string): Promise<void> {
+    await this.repository.delete({ token: tokenHash });
   }
 }
